@@ -1,0 +1,112 @@
+CREATE TABLE airline_data (
+    year INT,
+    quarter INT,
+    origin_city VARCHAR(100),
+    destination_city VARCHAR(100),
+    distance_miles FLOAT,
+    passengers INT,
+    avg_fare FLOAT,
+    largest_carrier VARCHAR(50),
+    largest_carrier_market_share FLOAT,
+    largest_carrier_fare FLOAT,
+    lowest_fare_carrier VARCHAR(50),
+    lowest_fare_carrier_share FLOAT,
+    lowest_fare FLOAT,
+    year_quarter VARCHAR(10),
+    fare_per_mile FLOAT
+);
+
+
+select count(*) from airline_data;
+
+---Unique City---
+SELECT COUNT(DISTINCT origin_city) AS total_origins,
+       COUNT(DISTINCT destination_city) AS total_destinations
+FROM airline_data;
+
+
+----Busiest Route----
+SELECT origin_city, destination_city,
+       SUM(passengers) AS total_passengers
+FROM airline_data
+GROUP BY origin_city, destination_city
+ORDER BY total_passengers DESC
+LIMIT 10;
+
+
+---Average fare by year-----
+SELECT 
+    year, 
+    ROUND(AVG(avg_fare)::numeric, 2) AS avg_ticket_price
+FROM airline_data
+GROUP BY year
+ORDER BY year;
+
+----Cheapest Route---
+SELECT origin_city, destination_city, MIN(lowest_fare) AS cheapest_fare
+FROM airline_data
+GROUP BY origin_city, destination_city
+ORDER BY cheapest_fare ASC
+LIMIT 10;
+
+---Expensive route----
+SELECT origin_city, destination_city, MAX(avg_fare) AS highest_fare
+FROM airline_data
+GROUP BY origin_city, destination_city
+ORDER BY highest_fare DESC
+LIMIT 10;
+
+-----Market Leader Airlines----
+SELECT largest_carrier,
+       ROUND(AVG(largest_carrier_market_share)::numeric,2) AS avg_market_share
+FROM airline_data
+GROUP BY largest_carrier
+ORDER BY avg_market_share DESC;
+
+
+----Fare per mile---
+select origin_city, destination_city,
+Round(Avg(fare_per_mile)::numeric,3) as avg_fare_per_mile
+from airline_data
+group by origin_city, destination_city
+order by avg_fare_per_mile desc
+limit 10;
+
+
+-----Passener trend over time----
+select year_quarter,
+sum(passengers) as total_passengers
+from airline_data
+group by year_quarter
+order by year_quarter;
+
+
+----low vs high fare----
+SELECT 
+    largest_carrier,
+    lowest_fare_carrier,
+    ROUND(AVG(largest_carrier_fare - lowest_fare):: numeric,2) AS fare_difference
+FROM airline_data
+GROUP BY largest_carrier, lowest_fare_carrier
+ORDER BY fare_difference DESC;
+
+
+---Top route per year (Window function)----
+SELECT *
+FROM (
+    SELECT year, origin_city, destination_city,
+           SUM(passengers) AS total_passengers,
+           RANK() OVER (PARTITION BY year ORDER BY SUM(passengers) DESC) AS rnk
+    FROM airline_data
+    GROUP BY year, origin_city, destination_city
+) t
+WHERE rnk = 1;
+
+
+---Running Total Passenger--
+SELECT year_quarter,
+       SUM(passengers) AS passengers,
+       SUM(SUM(passengers)) OVER (ORDER BY year_quarter) AS running_total
+FROM airline_data
+GROUP BY year_quarter;
+
